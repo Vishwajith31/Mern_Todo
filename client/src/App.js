@@ -5,15 +5,20 @@ function App() {
   const [todos, setTodos] = useState([]);
   const [popupActive, setPopupActive] = useState(false);
   const [newTodo, setNewTodo] = useState("");
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     GetTodos();
+    
   }, []);
 
   const GetTodos = () => {
     fetch(api_base + "/todos")
       .then((res) => res.json())
-      .then((data) => setTodos(data))
+      .then((data) => {
+        setTodos(data);
+        setLoading(false);
+      })
       .catch((err) => console.error("Error: ", err));
   };
 
@@ -34,6 +39,7 @@ function App() {
   };
 
   const addTodo = async () => {
+    if (!newTodo?.trim()) return; // Prevent creating todo with empty text or spaces
     const data = await fetch(api_base + "/todo/new", {
       method: "POST",
       headers: {
@@ -51,11 +57,14 @@ function App() {
   };
 
   const deleteTodo = async (id) => {
-    const data = await fetch(api_base + "/todo/delete/" + id, {
+    await fetch(api_base + "/todo/delete/" + id, {
       method: "DELETE",
     }).then((res) => res.json());
 
-    setTodos((todos) => todos.filter((todo) => todo._id !== data._id));
+    // Instead of editing todos locally stored, and updating state
+    // let's just call GetTodos() for avoiding hassle of managing
+    // different version of states on FE and BE
+    GetTodos();
   };
 
   return (
@@ -64,24 +73,36 @@ function App() {
       <h4>Your tasks</h4>
 
       <div className="todos">
-        {todos.length > 0 ? (
-          todos.map((todo) => (
-            <div
-              className={"todo" + (todo.complete ? " is-complete" : "")}
-              key={todo._id}
-              onClick={() => completeTodo(todo._id)}
-            >
-              <div className="checkbox"></div>
-
-              <div className="text">{todo.text}</div>
-
-              <div className="delete-todo" onClick={() => deleteTodo(todo._id)}>
-                x
-              </div>
-            </div>
-          ))
+        {loading ? (
+          <p>Loading...</p>
         ) : (
-          <p>You currently have no tasks</p>
+          <>
+            {todos.length > 0 ? (
+              todos.map((todo) => (
+                <div
+                  className={"todo" + (todo.complete ? " is-complete" : "")}
+                  key={todo._id}
+                  onClick={() => completeTodo(todo._id)}
+                >
+                  <div className="checkbox"></div>
+
+                  <div className="text">{todo.text}</div>
+
+                  <div
+                    className="delete-todo"
+                    onClick={(e) => {
+                      e.stopPropagation(); // prevent calling todos/complete when clicked on delete
+                      deleteTodo(todo._id);
+                    }}
+                  >
+                    x
+                  </div>
+                </div>
+              ))
+            ) : (
+              <p>You currently have no tasks</p>
+            )}
+          </>
         )}
       </div>
 
