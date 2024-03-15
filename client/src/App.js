@@ -9,6 +9,7 @@ function App() {
 
   useEffect(() => {
     GetTodos();
+    
   }, []);
 
   const GetTodos = () => {
